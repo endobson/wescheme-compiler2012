@@ -142,7 +142,7 @@
       (cond [(jsonp-request? request)
              (handle-jsonp-response request program-name program-input-port)]
             [else
-             (handle-response request program-name program-input-port)]))))
+             (handle-response/place request program-name program-text)]))))
 
 
 
@@ -366,6 +366,20 @@
       (close-output-port output-port)
       response)))
 
+(define (handle-response/place request program-name program-text)
+  (let-values  ([(response output-port)
+                 (make-port-response #:mime-type #"text/plain"
+                                     #:with-gzip? (request-accepts-gzip-encoding? request))])
+    (let-values ([(pinfo program-output)
+                  (compile/port program-text
+                                      #:pinfo (current-compiler-service-base-pinfo)
+                                      #:name program-name
+                                      #:runtime-version THIS-RUNTIME-VERSION)])
+      (display (format-output program-output pinfo request) output-port)
+      (close-output-port output-port)
+      response)))
+
+
 
 
         
@@ -509,6 +523,7 @@
 
 (module+ main
 
+  (displayln "here")
   (write-runtime-files)
 
   ;; A list of the extra module providers.

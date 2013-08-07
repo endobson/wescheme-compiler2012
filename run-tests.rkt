@@ -15,6 +15,7 @@
          scheme/list
          racket/cmdline
          "this-runtime-version.rkt"
+         "places-compiler.rkt"
          ;; profile
          "find-paren-loc.rkt"
          "src/compiler/mzscheme-vm/write-support.ss"
@@ -114,7 +115,7 @@
         (cond [(jsonp-request? request)
                (handle-json-response request program-name program-input-port)]
               [else
-               (handle-response request program-name program-input-port)]))])))
+               (handle-response/place request program-name program-text)]))])))
 
 
 
@@ -200,6 +201,8 @@
 
 
 (define (get-android-permissions pinfo)
+  null
+  #;
  (apply append 
         (map permission->android-permissions
              (pinfo-permissions pinfo))))
@@ -350,6 +353,16 @@
       (close-output-port output-port)
       response)))
 
+(define (handle-response/place request program-name program-text)
+  (let-values  ([(response output-port)
+                 (make-port-response #:mime-type #"text/plain")])
+    (let-values ([(pinfo program-output)
+                  (compile/port/place program-text
+                                      #:name program-name
+                                      #:runtime-version THIS-RUNTIME-VERSION)])
+      (display (format-output program-output pinfo request) output-port)
+      (close-output-port output-port)
+      response)))
 
 
 ;; wants-json-output?: request -> boolean
@@ -443,5 +456,5 @@
                #:servlet-path "/"
                #:servlet-regexp #px"^/(servlets/standalone.ss|listTestPrograms|getTestProgram)"
                #:extra-files-paths (list test-htdocs misc-runtime htdocs compat easyxdm)
-               #:launch-browser? #t
+               #:launch-browser? #f
                #:listen-ip #f)
